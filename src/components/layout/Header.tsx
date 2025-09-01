@@ -1,11 +1,28 @@
 
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 
 interface HeaderProps {
   setSidebarOpen: (open: boolean) => void;
 }
+
+const HeaderNavLink: React.FC<{ to: string; text: string }> = ({ to, text }) => (
+    <NavLink
+        to={to}
+        end
+        className={({ isActive }) =>
+            `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-150 whitespace-nowrap ${
+                isActive
+                    ? 'border-primary-500 text-gray-900 dark:text-white'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:text-gray-100'
+            }`
+        }
+    >
+        {text}
+    </NavLink>
+);
+
 
 const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   const [profileOpen, setProfileOpen] = useState(false);
@@ -19,18 +36,28 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
 
   return (
     <header className="relative bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-700/50 z-10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center lg:hidden">
-            <button onClick={() => setSidebarOpen(true)} className="text-gray-500 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="relative flex items-center justify-between h-16">
+          
+          {/* Left-side: Hamburger menu (mobile) */}
+          <div className="absolute inset-y-0 left-0 flex items-center lg:hidden">
+            <button onClick={() => setSidebarOpen(true)} className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500">
               <span className="sr-only">Open sidebar</span>
               <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
           </div>
-          <div className="flex-1">
-             {/* Can add search bar here if needed */}
+
+          {/* Center: Navigation Links (visible on all screens) */}
+          <div className="flex-1 flex items-center justify-center">
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                  <HeaderNavLink to="/" text="Dashboard" />
+                  <HeaderNavLink to="/action-plans" text="Action Plans" />
+                  <HeaderNavLink to="/archive" text="Archive" />
+              </div>
           </div>
-          <div className="ml-4 flex items-center md:ml-6">
+
+          {/* Right-side: Profile dropdown */}
+          <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
             <div className="ml-3 relative">
               <div>
                 <button onClick={() => setProfileOpen(!profileOpen)} className="max-w-xs bg-white dark:bg-gray-800 flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500" id="user-menu" aria-haspopup="true">

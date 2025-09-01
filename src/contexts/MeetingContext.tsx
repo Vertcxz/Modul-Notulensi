@@ -7,6 +7,7 @@ export interface MeetingContextType {
   getMeetingById: (id: string) => Meeting | undefined;
   addMeeting: (meeting: Meeting) => void;
   updateMeeting: (updatedMeeting: Meeting) => void;
+  deleteMeeting: (meetingId: string) => void;
 }
 
 export const MeetingContext = createContext<MeetingContextType | undefined>(undefined);
@@ -29,8 +30,12 @@ export const MeetingProvider: React.FC<{ children: ReactNode }> = ({ children })
     );
   };
 
+  const deleteMeeting = (meetingId: string) => {
+    setMeetings(prevMeetings => prevMeetings.filter(m => m.id !== meetingId));
+  };
+
   return (
-    <MeetingContext.Provider value={{ meetings, getMeetingById, addMeeting, updateMeeting }}>
+    <MeetingContext.Provider value={{ meetings, getMeetingById, addMeeting, updateMeeting, deleteMeeting }}>
       {children}
     </MeetingContext.Provider>
   );

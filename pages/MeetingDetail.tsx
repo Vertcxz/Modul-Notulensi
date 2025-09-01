@@ -1,6 +1,7 @@
 
+
 import React, { useContext, useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useMeetings } from '../contexts/MeetingContext';
 import { ActionItem, ActionItemStatus, Attachment, User, UserRole, Meeting, MeetingStatus } from '../types';
 import { exportToPdf } from '../services/pdfService';
@@ -14,6 +15,7 @@ const MeetingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { getMeetingById, updateMeeting } = useMeetings();
   const authContext = useContext(AuthContext);
+  const user = authContext?.user;
 
   const [isEditingMinutes, setIsEditingMinutes] = useState(false);
   const [editableMeeting, setEditableMeeting] = useState<Meeting | undefined | null>(null);
@@ -30,7 +32,34 @@ const MeetingDetail: React.FC = () => {
   }, [meeting]);
 
   if (!id) return <p>Meeting ID not found.</p>;
-  if (!meeting || !editableMeeting) return <p>Meeting not found.</p>;
+  if (!meeting) return <p>Meeting not found.</p>;
+  
+  const isAllowedToView = useMemo(() => {
+    if (!user) return false;
+    // Admins can see everything
+    if (user.role === UserRole.Admin) return true;
+    // The notetaker can see the meeting
+    if (meeting.notulis.id === user.id) return true;
+    // Participants can see the meeting
+    if (meeting.participants.some(p => p.id === user.id)) return true;
+    // Anyone else cannot
+    return false;
+  }, [user, meeting]);
+
+  if (!isAllowedToView) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8 max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+        <svg className="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mt-4">Access Denied</h1>
+        <p className="text-gray-600 dark:text-gray-300 mt-2">You do not have permission to view this meeting's details.</p>
+        <Link to="/" className="mt-6 bg-primary-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-primary-700 transition duration-300">
+          Return to Dashboard
+        </Link>
+      </div>
+    );
+  }
+
+  if (!editableMeeting) return <p>Loading meeting details...</p>;
 
   const handleExport = () => {
     exportToPdf(meeting, `Notulensi_${meeting.title.replace(/\s/g, '_')}`);
@@ -309,7 +338,9 @@ const AttachmentList: React.FC<{attachments?: Attachment[], isEditing?: boolean,
 const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
 const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const LocationMarkerIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
-const UserCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0012 11z" clipRule="evenodd" /></svg>
+const UserCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0012 11z" clipRule="evenodd" /></svg>;
+
+{/* FIX: Added missing icon components */}
 const PencilIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>;
 const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" /></svg>;
@@ -318,4 +349,5 @@ const FilePdfIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-f
 const FileDocIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V8.414A2 2 0 0017.414 7L13 2.586A2 2 0 0011.586 2H4zm5 7a1 1 0 11-2 0 1 1 0 012 0zm-2 2a1 1 0 100 2h6a1 1 0 100-2H7zm6 2a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" /></svg>;
 const FileImgIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V8.414A2 2 0 0017.414 7L13 2.586A2 2 0 0011.586 2H4zm5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm-2.586 4.586a.5.5 0 00-.707.707l3.5 3.5a.5.5 0 00.707 0l5.5-5.5a.5.5 0 00-.707-.707L9 12.293 6.414 9.707z" clipRule="evenodd" /></svg>;
 
+{/* FIX: Added missing default export */}
 export default MeetingDetail;

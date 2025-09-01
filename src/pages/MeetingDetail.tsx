@@ -1,6 +1,5 @@
-
 import React, { useContext, useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useMeetings } from '../hooks/useMeetings';
 import { ActionItem, ActionItemStatus, Attachment, User, UserRole, Meeting, MeetingStatus } from '../types';
 import { exportToPdf } from '../services/pdfService';
@@ -12,7 +11,8 @@ import { MOCK_USERS } from '../api/mockData';
 
 const MeetingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { getMeetingById, updateMeeting } = useMeetings();
+  const navigate = useNavigate();
+  const { getMeetingById, updateMeeting, deleteMeeting } = useMeetings();
   const authContext = useContext(AuthContext);
   const user = authContext?.user;
 
@@ -31,20 +31,61 @@ const MeetingDetail: React.FC = () => {
   }, [meeting]);
 
   if (!id) return <p>Meeting ID not found.</p>;
-  if (!meeting || !editableMeeting) return <p>Meeting not found.</p>;
+  if (!meeting) return <p>Meeting not found.</p>;
+
+  const isAllowedToView = useMemo(() => {
+    if (!user) return false;
+    // A user must be directly involved to view: host, notetaker, or participant.
+    // The Admin role by itself no longer grants access to enhance privacy.
+    if (meeting.createdBy.id === user.id) return true;
+    if (meeting.notulis.id === user.id) return true;
+    if (meeting.participants.some(p => p.id === user.id)) return true;
+    return false;
+  }, [user, meeting]);
+
+  if (!isAllowedToView) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8 max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+        <svg className="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mt-4">Access Denied</h1>
+        <p className="text-gray-600 dark:text-gray-300 mt-2">You do not have permission to view this meeting's details.</p>
+        <Link to="/" className="mt-6 bg-primary-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-primary-700 transition duration-300">
+          Return to Dashboard
+        </Link>
+      </div>
+    );
+  }
+
+  if (!editableMeeting) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <p className="text-gray-500 dark:text-gray-400">Loading meeting details...</p>
+      </div>
+    );
+  }
+
 
   const handleExport = () => {
     exportToPdf('meeting-minutes-content', `Minutes_${meeting.title.replace(/\s/g, '_')}`);
   }
 
-  const canEditDetails = authContext?.user?.id === meeting.createdBy.id;
+  const isHost = authContext?.user?.id === meeting.createdBy.id;
   const canEditMinutes = authContext?.user?.id === meeting.notulis.id;
+  const isAdmin = authContext?.user?.role === UserRole.Admin;
+
 
   const handleEditMinutesToggle = () => {
     if (isEditingMinutes) {
       updateMeeting(editableMeeting);
     }
     setIsEditingMinutes(!isEditingMinutes);
+  };
+
+  const handleDeleteMeeting = () => {
+    if (window.confirm('Are you sure you want to delete this meeting? This action cannot be undone.')) {
+        deleteMeeting(meeting.id);
+        navigate('/');
+    }
   };
 
   const handleCancelEditMinutes = () => {
@@ -157,7 +198,10 @@ const MeetingDetail: React.FC = () => {
                         <p className="text-md text-gray-500 dark:text-gray-400 mt-1">{meeting.agenda}</p>
                     </div>
                     <div className="flex items-center gap-2 no-print flex-wrap">
-                      {canEditDetails && (
+                      <button onClick={() => navigate(-1)} className="flex items-center gap-2 bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-300 dark:hover:bg-gray-500 transition duration-300">
+                          <ArrowLeftIcon /> Back
+                      </button>
+                      {(isHost || isAdmin) && (
                         <button onClick={() => setIsEditMeetingModalOpen(true)} className="flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition duration-300">
                            <PencilIcon/> Edit Details
                         </button>
@@ -165,6 +209,11 @@ const MeetingDetail: React.FC = () => {
                       {canEditMinutes && !isEditingMinutes && (
                         <button onClick={handleEditMinutesToggle} className="flex items-center gap-2 bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-yellow-600 transition duration-300">
                            <PencilIcon/> Edit Minutes
+                        </button>
+                      )}
+                       {(isHost || isAdmin) && (
+                         <button onClick={handleDeleteMeeting} className="flex items-center gap-2 bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-700 transition duration-300">
+                           <TrashIcon/> Delete Meeting
                         </button>
                       )}
                       {isEditingMinutes && (
@@ -215,7 +264,7 @@ const MeetingDetail: React.FC = () => {
                     <Section title="Participants">
                         <UserList 
                             users={editableMeeting.participants} 
-                            isEditing={canEditDetails && isEditingMinutes}
+                            isEditing={(isHost || isAdmin) && isEditingMinutes}
                             onRemove={handleRemoveParticipant}
                             onAdd={handleAddParticipant}
                         />
@@ -307,6 +356,7 @@ const AttachmentList: React.FC<{attachments?: Attachment[], isEditing?: boolean,
 };
 
 // SVG Icons...
+const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
 const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
 const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const LocationMarkerIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;

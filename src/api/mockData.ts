@@ -12,6 +12,15 @@ export const MOCK_USERS: User[] = [
   { id: 'u9', name: 'Indah Puspita', email: 'indah@example.com', password: 'password123', role: UserRole.Participant, avatar: 'https://i.pravatar.cc/150?u=u9' },
   { id: 'u10', name: 'Joko Santoso', email: 'joko.admin@example.com', password: 'password123', role: UserRole.Admin, avatar: 'https://i.pravatar.cc/150?u=u10' },
   { id: 'u11', name: 'Kartika Sari', email: 'kartika@example.com', password: 'password123', role: UserRole.Participant, avatar: 'https://i.pravatar.cc/150?u=u11' },
+  { id: 'u12', name: 'Liana Sari', email: 'liana@example.com', password: 'password123', role: UserRole.Participant, avatar: 'https://i.pravatar.cc/150?u=u12' },
+  { id: 'u13', name: 'Maulana Yusuf', email: 'maulana@example.com', password: 'password123', role: UserRole.Participant, avatar: 'https://i.pravatar.cc/150?u=u13' },
+  { id: 'u14', name: 'Nina Zulkarnain', email: 'nina.notulis@example.com', password: 'password123', role: UserRole.Notulis, avatar: 'https://i.pravatar.cc/150?u=u14' },
+  { id: 'u15', name: 'Omar Faruq', email: 'omar@example.com', password: 'password123', role: UserRole.Participant, avatar: 'https://i.pravatar.cc/150?u=u15' },
+  { id: 'u16', name: 'Putri Wulandari', email: 'putri@example.com', password: 'password123', role: UserRole.Participant, avatar: 'https://i.pravatar.cc/150?u=u16' },
+  { id: 'u17', name: 'Rahmat Hidayat', email: 'rahmat@example.com', password: 'password123', role: UserRole.Participant, avatar: 'https://i.pravatar.cc/150?u=u17' },
+  { id: 'u18', name: 'Siti Aminah', email: 'siti@example.com', password: 'password123', role: UserRole.Participant, avatar: 'https://i.pravatar.cc/150?u=u18' },
+  { id: 'u19', name: 'Taufik Hidayat', email: 'taufik@example.com', password: 'password123', role: UserRole.Participant, avatar: 'https://i.pravatar.cc/150?u=u19' },
+  { id: 'u20', name: 'Yuni Shara', email: 'yuni@example.com', password: 'password123', role: UserRole.Participant, avatar: 'https://i.pravatar.cc/150?u=u20' },
 ];
 
 export const MOCK_MEETINGS: Meeting[] = [
@@ -68,7 +77,7 @@ export const MOCK_MEETINGS: Meeting[] = [
     startTime: '09:00',
     endTime: '11:00',
     location: 'Main Auditorium',
-    participants: MOCK_USERS,
+    participants: MOCK_USERS.slice(0, 10), // Use a subset for this big meeting
     notulis: MOCK_USERS[1],
     createdBy: MOCK_USERS[0],
     status: MeetingStatus.Scheduled,

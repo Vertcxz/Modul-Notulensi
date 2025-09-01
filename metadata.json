@@ -1,0 +1,5 @@
+{
+  "name": "Modul Notulensi",
+  "description": "A comprehensive web application for managing meetings, taking digital minutes, and tracking action plans. Features include role-based access, calendar integration, and PDF export.",
+  "requestFramePermissions": []
+}

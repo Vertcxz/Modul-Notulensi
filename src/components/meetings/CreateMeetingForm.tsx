@@ -1,4 +1,5 @@
 
+
 import React, { useState, useContext } from 'react';
 import { useMeetings } from '../../hooks/useMeetings';
 import { AuthContext } from '../../contexts/AuthContext';
@@ -88,7 +89,7 @@ const CreateMeetingForm: React.FC<CreateMeetingFormProps> = ({ onClose }) => {
             <label htmlFor="notulis" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Notulis</label>
             <select id="notulis" value={notulisId} onChange={e => setNotulisId(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 dark:border-gray-600" required>
                 <option value="" disabled>Select a Notulis</option>
-                {MOCK_USERS.filter(user => user.role === UserRole.Notulis).map(user => (
+                {MOCK_USERS.map(user => (
                     <option key={user.id} value={user.id}>{user.name}</option>
                 ))}
             </select>

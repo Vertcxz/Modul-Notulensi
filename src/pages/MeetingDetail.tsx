@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useMeetings } from '../hooks/useMeetings';
@@ -70,8 +71,8 @@ const MeetingDetail: React.FC = () => {
   }
 
   const isHost = authContext?.user?.id === meeting.createdBy.id;
-  const canEditMinutes = authContext?.user?.id === meeting.notulis.id;
-  const isAdmin = authContext?.user?.role === UserRole.Admin;
+  const isNotulis = authContext?.user?.id === meeting.notulis.id;
+  const canEditMinutes = isNotulis;
 
 
   const handleEditMinutesToggle = () => {
@@ -140,17 +141,12 @@ const MeetingDetail: React.FC = () => {
         });
     }
   };
-  const handleAddAttachment = () => {
-      const fileName = prompt("Enter file name (e.g., 'report.pdf'):");
-      if (fileName) {
-          const type = fileName.split('.').pop()?.startsWith('doc') ? 'doc' : (fileName.split('.').pop() === 'pdf' ? 'pdf' : 'img');
-          const newAttachment: Attachment = { id: `att${Date.now()}`, name: fileName, url: '#', type: type as any };
-          setEditableMeeting(prev => {
-              if (!prev) return prev;
-              const minutes = prev.minutes || { summary: '', actionItems: [], attachments: [] };
-              return { ...prev, minutes: { ...minutes, attachments: [...minutes.attachments, newAttachment] }};
-          });
-      }
+  const handleAddAttachments = (newAttachments: Attachment[]) => {
+      setEditableMeeting(prev => {
+          if (!prev) return prev;
+          const minutes = prev.minutes || { summary: '', actionItems: [], attachments: [] };
+          return { ...prev, minutes: { ...minutes, attachments: [...minutes.attachments, ...newAttachments] }};
+      });
   };
   // Participant CRUD
   const handleRemoveParticipant = (userId: string) => {
@@ -201,7 +197,7 @@ const MeetingDetail: React.FC = () => {
                       <button onClick={() => navigate(-1)} className="flex items-center gap-2 bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-300 dark:hover:bg-gray-500 transition duration-300">
                           <ArrowLeftIcon /> Back
                       </button>
-                      {(isHost || isAdmin) && (
+                      {(isHost) && (
                         <button onClick={() => setIsEditMeetingModalOpen(true)} className="flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition duration-300">
                            <PencilIcon/> Edit Details
                         </button>
@@ -211,7 +207,7 @@ const MeetingDetail: React.FC = () => {
                            <PencilIcon/> Edit Minutes
                         </button>
                       )}
-                       {(isHost || isAdmin) && (
+                       {(isHost) && (
                          <button onClick={handleDeleteMeeting} className="flex items-center gap-2 bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-700 transition duration-300">
                            <TrashIcon/> Delete Meeting
                         </button>
@@ -264,7 +260,7 @@ const MeetingDetail: React.FC = () => {
                     <Section title="Participants">
                         <UserList 
                             users={editableMeeting.participants} 
-                            isEditing={(isHost || isAdmin) && isEditingMinutes}
+                            isEditing={false}
                             onRemove={handleRemoveParticipant}
                             onAdd={handleAddParticipant}
                         />
@@ -274,7 +270,7 @@ const MeetingDetail: React.FC = () => {
                        <AttachmentList 
                          attachments={editableMeeting.minutes?.attachments} 
                          isEditing={isEditingMinutes}
-                         onAdd={handleAddAttachment}
+                         onAdd={handleAddAttachments}
                          onDelete={handleDeleteAttachment}
                        />
                     </Section>
@@ -304,7 +300,15 @@ const MeetingDetail: React.FC = () => {
 
 // Sub-components...
 const InfoItem: React.FC<{icon: React.ReactNode, label: string, value: string}> = ({ icon, label, value }) => ( <div className="flex items-start"><div className="flex-shrink-0 text-gray-400 h-5 w-5 mr-2 mt-0.5">{icon}</div><div><p className="text-gray-500 dark:text-gray-400 font-semibold">{label}</p><p className="text-gray-800 dark:text-gray-200">{value}</p></div></div>);
-const Section: React.FC<{title: string, children: React.ReactNode}> = ({ title, children }) => (<div><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{title}</h2></div>{children}</div>);
+const Section: React.FC<{title: string, children: React.ReactNode, actionButton?: React.ReactNode}> = ({ title, children, actionButton }) => (
+    <div>
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{title}</h2>
+            {actionButton && <div className="no-print">{actionButton}</div>}
+        </div>
+        {children}
+    </div>
+);
 
 const UserList: React.FC<{users: User[], isEditing: boolean, onRemove: (id: string) => void, onAdd: (id: string) => void}> = ({ users, isEditing, onRemove, onAdd }) => {
     const [newUser, setNewUser] = useState('');
@@ -347,12 +351,100 @@ const ActionPlanTable: React.FC<{items?: ActionItem[], isEditing?: boolean, onAd
     return (<div className="space-y-4"><div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700"><thead className="bg-gray-50 dark:bg-gray-700/50"><tr><th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Task</th><th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">PIC</th><th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Deadline</th><th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>{isEditing && <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>}</tr></thead><tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">{items?.map(item => (<tr key={item.id}><td className="px-4 py-4 text-sm text-gray-800 dark:text-gray-200 align-top">{item.task}</td><td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 align-top">{item.pic.name}</td><td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 align-top">{item.deadline}</td><td className="px-4 py-4 text-sm align-top"><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColor(item.status)}`}>{item.status}</span></td>{isEditing && (<td className="px-4 py-4 text-sm text-right space-x-2 align-top no-print"><button onClick={() => onEdit(item)} className="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300"><PencilIcon /></button><button onClick={() => onDelete(item.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"><TrashIcon /></button></td>)}</tr>))}{(!items || items.length === 0) && isEditing && (<tr><td colSpan={5} className="text-center py-4 text-gray-500 dark:text-gray-400">No action items yet. Click below to add one.</td></tr>)}</tbody></table></div>{isEditing && (<button onClick={onAdd} className="no-print w-full text-sm text-primary-600 dark:text-primary-400 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg py-2 hover:border-primary-500 dark:hover:border-primary-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors">+ Add Action Item</button>)}</div>);
 };
 
-const AttachmentList: React.FC<{attachments?: Attachment[], isEditing?: boolean, onAdd: () => void, onDelete: (id: string) => void}> = ({ attachments, isEditing, onAdd, onDelete }) => {
-     if (!attachments || attachments.length === 0 && !isEditing) return <p className="text-gray-500 dark:text-gray-400">No attachments.</p>;
-     const typeIcon = (type: string) => {
-        if (type === 'pdf') return <span className="text-red-500"><FilePdfIcon/></span>; if (type === 'doc') return <span className="text-blue-500"><FileDocIcon/></span>; if (type === 'img') return <span className="text-green-500"><FileImgIcon/></span>; return <FileIcon/>;
-     };
-     return (<div className="space-y-3">{attachments?.map(att => (<div key={att.id} className="group flex items-center p-2 -m-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><div className="h-6 w-6 mr-3">{typeIcon(att.type)}</div><a href={att.url} className="flex-grow text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400">{att.name}</a>{isEditing && (<button onClick={() => onDelete(att.id)} className="no-print ml-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><TrashIcon /></button>)}</div>))}{isEditing && (<button onClick={onAdd} className="no-print mt-2 w-full text-sm text-primary-600 dark:text-primary-400 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg py-2 hover:border-primary-500 dark:hover:border-primary-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors">Upload File</button>)}</div>);
+const AttachmentList: React.FC<{attachments?: Attachment[], isEditing?: boolean, onAdd: (attachments: Attachment[]) => void, onDelete: (id: string) => void}> = ({ attachments, isEditing, onAdd, onDelete }) => {
+    const [isUploading, setIsUploading] = useState(false);
+
+    if (!attachments || attachments.length === 0 && !isEditing) return <p className="text-gray-500 dark:text-gray-400">No attachments.</p>;
+
+    const typeIcon = (type: string) => {
+        if (type === 'pdf') return <span className="text-red-500"><FilePdfIcon/></span>;
+        if (type === 'doc') return <span className="text-blue-500"><FileDocIcon/></span>;
+        if (type === 'img') return <span className="text-green-500"><FileImgIcon/></span>;
+        return <FileIcon/>;
+    };
+    
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+
+        setIsUploading(true);
+        const files = Array.from(e.target.files);
+        const newAttachments: Attachment[] = [];
+        let filesProcessed = 0;
+
+        const getFileType = (fileName: string): 'pdf' | 'doc' | 'img' => {
+            const extension = fileName.split('.').pop()?.toLowerCase() || '';
+            if (['pdf'].includes(extension)) return 'pdf';
+            if (['doc', 'docx'].includes(extension)) return 'doc';
+            if (['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(extension)) return 'img';
+            return 'doc'; // Default fallback
+        };
+        
+        files.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = (loadEvent) => {
+                const newAttachment: Attachment = {
+                    id: `att${Date.now()}${index}`,
+                    name: file.name,
+                    url: loadEvent.target?.result as string,
+                    type: getFileType(file.name),
+                };
+                newAttachments.push(newAttachment);
+                filesProcessed++;
+                if (filesProcessed === files.length) {
+                    onAdd(newAttachments);
+                    setIsUploading(false);
+                }
+            };
+            reader.onerror = () => {
+                console.error("Error reading file:", file.name);
+                setIsUploading(false);
+                alert("An error occurred while reading a file. Please try again.");
+            }
+            reader.readAsDataURL(file);
+        });
+        
+        e.target.value = '';
+    };
+
+    return (
+        <div className="space-y-3">
+            {attachments?.map(att => (
+                <div key={att.id} className="group flex items-center p-2 -m-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <div className="h-10 w-10 mr-3 flex-shrink-0 flex items-center justify-center">
+                        {att.type === 'img' ? (
+                            <img src={att.url} alt={att.name} className="h-full w-full object-cover rounded-md" />
+                        ) : (
+                            <div className="h-6 w-6">{typeIcon(att.type)}</div>
+                        )}
+                    </div>
+                    <a href={att.url} download={att.name} className="flex-grow text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 truncate" title={att.name}>
+                        {att.name}
+                    </a>
+                    {isEditing && (
+                        <button onClick={() => onDelete(att.id)} className="no-print ml-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><TrashIcon /></button>
+                    )}
+                </div>
+            ))}
+            {isEditing && (
+                isUploading ? (
+                    <div className="no-print mt-2 w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg py-2">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                    </div>
+                ) : (
+                    <>
+                        <label htmlFor="attachment-upload" className="no-print mt-2 w-full cursor-pointer text-center text-sm text-primary-600 dark:text-primary-400 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg py-2 block hover:border-primary-500 dark:hover:border-primary-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors">
+                            Upload Files
+                        </label>
+                        <input id="attachment-upload" type="file" multiple className="hidden" onChange={handleFileChange} disabled={isUploading} />
+                    </>
+                )
+            )}
+        </div>
+    );
 };
 
 // SVG Icons...
